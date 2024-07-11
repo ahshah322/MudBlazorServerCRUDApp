@@ -19,6 +19,11 @@ namespace MudBlazorServerCRUD.Services.GenderService
 
         public List<Gender> Genders { get; set; } = new List<Gender>();
 
+        public async Task GetGenders()
+        {
+            Genders = await _context.Genders.ToListAsync();
+        }
+
         public async Task CreateGender(Gender Gender)
         {
             _context.Genders.Add(Gender);
@@ -35,13 +40,6 @@ namespace MudBlazorServerCRUD.Services.GenderService
             await _context.SaveChangesAsync();
         }
 
-        //public async Task<Gender> GetSingleGender(int id)
-        //{
-        //    var Gender = await _context.Genders.FindAsync(id);
-        //    if (Gender == null)
-        //        throw new Exception("No Gender here. :/");
-        //    return Gender;
-        //}
         public async Task<Gender> GetSingleGender(int id)
         {
             var Gender = await _context.Genders
@@ -52,10 +50,6 @@ namespace MudBlazorServerCRUD.Services.GenderService
             return Gender;
         }
 
-        public async Task GetGenders()
-        {
-            Genders = await _context.Genders.ToListAsync();
-        }
 
         public async Task UpdateGender(Gender Gender)
         {

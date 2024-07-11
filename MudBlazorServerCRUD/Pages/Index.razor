@@ -3,7 +3,6 @@
 @using MudBlazorServerCRUD.Model
 @using System.Collections.ObjectModel
 @using System.ComponentModel.DataAnnotations
-@using MudBlazorServerCRUD.Pages.Form
 
 @inject IStudentService StudentService
 @inject IGenderService GenderService
@@ -16,18 +15,14 @@
 <MudDataGrid @ref="_studentDataGrid" T="Student" FilterMode="DataGridFilterMode.ColumnFilterRow" Bordered="true"
              MultiSelection="false" Items="@FilteredStudents" SortMode="SortMode.Multiple"
              Filterable="true" FilterCaseSensitivity="@_caseSensitivity" QuickFilter="@_quickFilterStudent" Striped="true" EditTrigger="DataGridEditTrigger.Manual"
-             StartedEditingItem="@StartedEditingItem" CanceledEditingItem="@CanceledEditingItem" CommittedItemChanges="@CommittedItemChanges"
              Hideable="true" EditMode="@_filterMode" ReadOnly="@_readOnly">
     <ToolBarContent>
-        @* <MudButton Variant="Variant.Filled" Class="my-3 ml-auto" Color="Color.Success" OnClick="OpenDialog" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add">Add Student</MudButton> *@
         <MudButton Variant="Variant.Filled" Class="my-3 ml-auto" Color="Color.Success" OnClick="Open" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add">Add Student</MudButton>
-        @* <MudButton Variant="Variant.Filled" Class="my-3 ml-auto" Color="Color.Success" OnClick="@(() => _studentDataGrid.SetEditingItemAsync(new Student()))" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add">Add Student</MudButton> *@
         <MudSpacer />
         <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
                       AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
     </ToolBarContent>
     <Columns>
-        @* <SelectColumn T="Student" /> *@
         <PropertyColumn Property="x => x.Name" SortBy="@_sortBy">
             <FilterTemplate>
                 <MudStack Row Justify="Justify.Center" AlignItems="AlignItems.Center">
@@ -73,7 +68,6 @@
          <TemplateColumn CellClass="">
              <CellTemplate>
                  <MudStack Row>
-                    @* <MudIconButton Size="@Size.Small" Color="Color.Info" Icon="@Icons.Material.Outlined.Edit" OnClick="@context.Actions.StartEditingItemAsync" /> *@
                     <MudIconButton Size="@Size.Small" Color="Color.Info" Icon="@Icons.Material.Outlined.Edit" OnClick="(() => EditStudentDataRow(context.Item))" />
                     <MudIconButton Size="@Size.Small" Color="Color.Error" Icon="@Icons.Material.Outlined.Delete" OnClick="(() => DeleteStudentDataRow(context.Item))" />
                 </MudStack>
@@ -110,14 +104,11 @@
                              Filterable="true" Striped="false" Hover="true" EditTrigger="DataGridEditTrigger.Manual"
                              Hideable="false">
                     <ToolBarContent>
-                        @* <MudButton Variant="Variant.Filled" Class="my-3 ml-auto" Color="Color.Success" OnClick="CreateNewStudent" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add">Add Student</MudButton>
-                        <MudSpacer />*@
                         <MudTextField @bind-Value="_searchString" Placeholder="Search"
                                       Adornment="Adornment.Start" Immediate="true"
                                       AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
                     </ToolBarContent>
                     <Columns>
-                        @* <SelectColumn ShowInHeader="false" T="Student" /> *@
                         <PropertyColumn Property="x => x.Name" Filterable="true" />
                         <PropertyColumn Property="x => x.NameA" Filterable="true" />
                         <PropertyColumn Property="x => x.NameB" Filterable="true" />
@@ -138,7 +129,6 @@
                          MultiSelection="false" Items="@_student.Grades" SortMode="SortMode.Multiple"
                          Filterable="true" Striped="false" EditMode="@_filterMode" Hover="true" EditTrigger="DataGridEditTrigger.Manual">
                 <ToolBarContent>
-                    @* <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="@(() => _gradesDataGrid.SetEditingItemAsync(new Grade()))" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add">Add Grades</MudButton> *@
                     <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="OpenNested" Size="Size.Small" Class="text-capitalize" StartIcon="@Icons.Material.Filled.Add">Add Grade</MudButton>
                     <MudSpacer />
                     <MudTextField @bind-Value="_searchString" Placeholder="Search"
@@ -151,7 +141,6 @@
                     <TemplateColumn CellClass="">
                         <CellTemplate>
                             <MudStack Row>
-                                @* <MudIconButton Size="@Size.Small" Color="Color.Info" Icon="@Icons.Material.Outlined.Edit" OnClick="@context.Actions.StartEditingItemAsync" /> *@
                                 <MudIconButton Size="@Size.Small" Color="Color.Info" Icon="@Icons.Material.Outlined.Edit" OnClick="@(() => EditGradeDataRow(context.Item))" />
                                 <MudIconButton Size="@Size.Small" Color="Color.Error" Icon="@Icons.Material.Outlined.Delete" OnClick="(() => DeleteGradeDataRow(context.Item))" />
                             </MudStack>
@@ -212,27 +201,33 @@
     private int _marksSearchFilter;
     private string _marksValue;
     private bool _sortNameByLength;
-    private bool _isCellEditMode = false;
     private bool _readOnly = false;
-    private bool _editRow = false;
     private bool _dropdownOpen = false;
-    private bool _saveRow;
     private bool _visible;
     private bool _nestedVisible;
     private string _genderSelectedName { get; set; }
     // Dialog
-    private void Close() => _visible = false;
     private void OpenNested() => _nestedVisible = true;
-    private void CloseNested() => _nestedVisible = false;
     // Popup
     private void OpenDropdown() => _dropdownOpen = true;
     private void CloseDropdown() => _dropdownOpen = false;
     private void OnMudSelectClearButtonClick() => _dropdownOpen = true;
 
-
     private void Open() { 
         _visible = true;
+        _genderSelectedName = string.Empty;
         LoadGrades();
+    }
+
+    private void Close() { 
+        _visible = false;
+        _student = new Student();
+    }
+
+    private void CloseNested()
+    {
+        _nestedVisible = false;
+        _grade = new Grade();
     }
 
     // custom sort by name length
@@ -331,12 +326,6 @@
         _marksSearchFilter = marks;
     }
 
-    
-    async Task OpenDialog()
-    {
-        await DialogService.ShowAsync<StudentFormDialogFinal>("", _studentDialogOptions);
-    }
-
     private async Task SubmitGrade()
     {
         await _gradeFrom.Validate();
@@ -395,6 +384,8 @@
     {
         _student = student;
         Open();
+        if (string.IsNullOrEmpty(_genderSelectedName))
+            _genderSelectedName = student.Gender.Name;
     }
 
     async Task DeleteGradeDataRow(Grade grade)
@@ -410,26 +401,6 @@
             _grade = studentGrade;
         }
         OpenNested();
-    }
-
-    // events
-    void StartedEditingItem(Student student)
-    {
-        //_events.Insert(0, $"Event = StartedEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(student)}");
-    }
-
-    void CanceledEditingItem(Student student)
-    {
-        //_events.Insert(0, $"Event = CanceledEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(student)}");
-    }
-
-    async void CommittedItemChanges(Student student)
-    {
-        await StudentService.UpdateStudent(student);
-        _readOnly = false;
-        _editRow = false;
-        Snackbar.Add("Student updated successfuly!", Severity.Success);
-        //_events.Insert(0, $"Event = CommittedItemChanges, Data = {System.Text.Json.JsonSerializer.Serialize(student)}");
     }
 
     private void GenderDataGridRowClick(DataGridRowClickEventArgs<Gender> args)

@@ -1,9 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 using MudBlazorServerCRUD.Data;
-using MudBlazorServerCRUD.Services;
-using MudBlazorServerCRUD.Services.StudentService;
 using MudBlazorServerCRUD.Services.GenderService;
+using MudBlazorServerCRUD.Services.StudentService;
 
 
 
@@ -13,7 +12,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddControllersWithViews();
 builder.Services.AddServerSideBlazor();
-builder.Services.AddSingleton<WeatherForecastService>();
 builder.Services.AddScoped<IStudentService, StudentService>();
 builder.Services.AddScoped<IGenderService, GenderService>();
 builder.Services.AddMudServices();
