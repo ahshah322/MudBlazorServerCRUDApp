@@ -1,0 +1,69 @@
+﻿@page "/MultiColumnDropdown2"
+@inject IStudentService StudentService
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter</h1>
+
+<p role="status">Current count: @currentCount</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+<br />
+<br />
+<br />
+
+<MudSelect Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter" T="Student" MultiSelection="false" SelectAll="true" SelectAllText="Select all felines" @bind-Value="value" @bind-SelectedValues="options" MultiSelectionTextFunc="@(new Func<List<string>, string>(GetMultiSelectionText))" Label="Felines" AdornmentIcon="@Icons.Material.Filled.Search">
+        <ChildContent>
+        <MudDataGrid T="Student" FilterMode="DataGridFilterMode.ColumnFilterRow" Bordered="true"
+                     MultiSelection="false" Items="@StudentService.Students" SortMode="SortMode.Multiple"
+                     Filterable="true" Striped="true" EditTrigger="DataGridEditTrigger.Manual"
+                     Hideable="true">
+            <ToolBarContent>
+                @* <MudButton Variant="Variant.Filled" Class="my-3 ml-auto" Color="Color.Success" OnClick="CreateNewStudent" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add">Add Student</MudButton>
+                <MudSpacer />
+                <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
+                              AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField> *@
+
+            </ToolBarContent>
+            <Columns>
+                @* <SelectColumn T="Student" /> *@
+                <PropertyColumn Property="x => x.Name" />
+                <PropertyColumn Property="x => x.Email" Title="Email" />
+                <PropertyColumn Property="x => x.Marks" Title="Marks" />
+                <PropertyColumn Property="x => x.DateOfBirth" Title="Date Of Birth">
+                    <EditTemplate>
+                        <MudDatePicker @bind-Date="context.Item.DateOfBirth"
+                                       Editable="true"
+                                       DateFormat="dd/MM/yyyy" />
+                    </EditTemplate>
+                </PropertyColumn>
+            </Columns>
+            <NoRecordsContent>
+                No Records added.
+            </NoRecordsContent>
+            <PagerContent>
+                <MudDataGridPager T="Student" />
+            </PagerContent>
+        </MudDataGrid>
+    </ChildContent>
+</MudSelect>
+@code {
+    private Student value { get; set; } 
+    private IEnumerable<Student> options { get; set; } = new HashSet<Student>();
+
+    private int currentCount = 0;
+    private IEnumerable<Student> employees = new List<Student>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await StudentService.GetStudents();
+    }
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+    private string GetMultiSelectionText(List<string> selectedValues)
+    {
+        return $"{selectedValues.Count} feline{(selectedValues.Count > 1 ? "s have" : " has")} been selected";
+    }
+}

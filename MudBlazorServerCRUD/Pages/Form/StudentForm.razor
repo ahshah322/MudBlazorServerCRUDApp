@@ -1,0 +1,65 @@
+﻿@page "/studentform"
+@page "/studentform/{id:int}"
+
+@inject IStudentService StudentService
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h5">@btnText</MudText>
+
+<EditForm Model="Student" OnValidSubmit="HandleSubmit" >
+    <DataAnnotationsValidator />
+    <MudGrid Justify="Justify.Center" >
+        <MudItem xs="12" sm="7">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <MudHidden @bind-Value="Student.Id" /> 
+                    <MudTextField Label="Name" Class="mt-3" Margin="Margin.Dense"
+                                  @bind-Value="Student.Name" For="@(() => Student.Name)" />
+                    <MudTextField Label="Email" Class="mt-3" Margin="Margin.Dense"
+                                  @bind-Value="Student.Email" For="@(() => Student.Email)" />
+                    <MudDatePicker Label="Birth Date"  Class="my-3" Editable="true" PickerVariant="PickerVariant.Dialog"
+                                  @bind-Date="Student.DateOfBirth" Margin="Margin.Dense" />
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Size="Size.Small" Color="Color.Success" Class="ml-auto mr-2">@btnText</MudButton>
+                </MudCardActions>               
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</EditForm>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    string btnText = string.Empty;
+
+    private Student Student = new Student();
+
+    protected override async Task OnInitializedAsync()
+    {
+        btnText = Id == null ? "Add Student" : "Update Student";
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id != null)
+        {
+            Student = await StudentService.GetSingleStudent((int)Id);
+        }
+    }
+
+    async Task HandleSubmit()
+    {
+        if (Id == null)
+        {
+            await StudentService.CreateStudent(Student);
+            Snackbar.Add("Student added successfuly!", Severity.Success);
+        }
+        else
+        {
+            await StudentService.UpdateStudent(Student);
+            Snackbar.Add("Student updated successfuly!", Severity.Success);
+        }
+    }
+}

@@ -1,0 +1,57 @@
+﻿@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IGenderService GenderService
+@inject NavigationManager NavigationManager
+@using System.Text.RegularExpressions
+@using System.ComponentModel.DataAnnotations
+
+<MudDialog Style="z-index: 10;">
+    <DialogContent>
+        <MudForm Model="@_gender" @ref="form">
+            <MudTextField @bind-Value="_gender.Name" Margin="Margin.Dense"
+                          Variant="Variant.Outlined" Label="Name" Required="true" RequiredError="Name is required!" />
+            <MudTextField @bind-Value="_gender.NameA" Margin="Margin.Dense"
+                          Variant="Variant.Outlined" Label="NameA" Required="true" RequiredError="NameA is required!" />
+            <MudTextField @bind-Value="_gender.NameB" Margin="Margin.Dense"
+                          Variant="Variant.Outlined" Label="NameB" Required="true" RequiredError="NameB is required!" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Filled" FullWidth="true">Cancel</MudButton>
+        <MudButton OnClick="@(()=> Submit())" Variant="Variant.Filled" Color="Color.Success" FullWidth="true">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+    MudForm form;
+    private Gender _gender = new Gender();
+    private void Cancel() => MudDialog.Cancel();
+    private int _genderSelectedId { get; set; }
+    private string _genderSelectedName { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GenderService.GetGenders();
+    }
+   
+    private async Task Submit()
+    {
+        await form.Validate();
+
+        if (form.IsValid)
+        {
+            if (_gender.Id == 0)
+            {
+                await GenderService.CreateGender(_gender);
+                Snackbar.Add("Gender created successfuly!", Severity.Success);
+            }
+            else
+            {
+                await GenderService.UpdateGender(_gender);
+                Snackbar.Add("Gender updated successfuly!", Severity.Success);
+            }
+        }
+    }
+}

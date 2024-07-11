@@ -1,0 +1,158 @@
+﻿@page "/2"
+@using System.Net.Http.Json
+@using MudBlazorServerCRUD.Model
+@using System.Collections.ObjectModel
+@using System.ComponentModel.DataAnnotations
+
+@inject IStudentService StudentService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+@* <MudButton Variant="Variant.Filled" Class="my-3 ml-auto" Color="Color.Success" OnClick="@(() => CreateNewStudent(new Student()))" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add">Add Student</MudButton> *@
+@* <div class="d-flex flex-wrap mt-4">
+    <MudSwitch @bind-Value="_readOnly" Color="Color.Primary">Read Only</MudSwitch>
+    <div class="d-flex justify-start align-center">
+        <p class="mud-typography mud-typography-body1 mud-inherit-text mr-2">Form</p>
+        <MudSwitch @bind-Value="_isCellEditMode">Cell</MudSwitch>
+    </div>
+    <div class="d-flex justify-start align-center">
+        <p class="mud-typography mud-typography-body1 mud-inherit-text mr-2">Manual</p>
+        <MudSwitch @bind-Value="_editTriggerRowClick">On Row Click</MudSwitch>
+    </div>
+</div> *@
+
+<MudText Typo="Typo.h6">Students</MudText>
+
+<MudDataGrid @ref="_studentDataGrid"  T="Student" FilterMode="DataGridFilterMode.ColumnFilterRow" Bordered="true"
+             MultiSelection="false" Items="@StudentService.Students" SortMode="SortMode.Multiple" EditDialogOptions="@_maxWidth"
+             Filterable="true" QuickFilter="@_quickFilter" Striped="true" EditTrigger="DataGridEditTrigger.OnRowClick"
+             StartedEditingItem="@StartedEditingItem" CanceledEditingItem="@CanceledEditingItem" CommittedItemChanges="@CommittedItemChanges"
+             Hideable="true" EditMode="@_filterMode" ReadOnly="@_readOnly">
+    <ToolBarContent>
+        @* <MudButton Variant="Variant.Filled" Class="my-3 ml-auto" Color="Color.Success" OnClick="CreateNewStudent" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add">Add Student</MudButton> *@
+        <MudButton Variant="Variant.Filled" Class="my-3 ml-auto" Color="Color.Success" OnClick="@(() => _studentDataGrid.SetEditingItemAsync(new Student()))" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add">Add Student</MudButton>
+        <MudSpacer />
+        <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
+                      AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+
+    </ToolBarContent>
+    <Columns>
+        @* <SelectColumn T="Student" /> *@
+        <PropertyColumn Property="x => x.Name" SortBy="@_sortBy" />
+        <PropertyColumn Property="x => x.Email" Title="Email" />
+        <PropertyColumn Property="x => x.Marks" Title="Marks" />
+        <PropertyColumn Property="x => x.DateOfBirth" Title="Date Of Birth">
+            <EditTemplate>
+                <MudDatePicker @bind-Date="context.Item.DateOfBirth"
+                               Editable="true"
+                               DateFormat="dd/MM/yyyy" />
+            </EditTemplate>
+        </PropertyColumn>
+        <TemplateColumn  CellClass="">
+            <CellTemplate>
+                <MudStack Row>
+                    <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" OnClick="@context.Actions.StartEditingItemAsync" />
+                    <MudIconButton Size="@Size.Small" Color="Color.Error" Icon="@Icons.Material.Outlined.Delete" OnClick="(() => DeleteStudentDataRow(context.Item))" />
+                </MudStack>
+
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <NoRecordsContent>
+        No Records added.
+    </NoRecordsContent>
+    <PagerContent>
+        <MudDataGridPager T="Student" />
+    </PagerContent>
+</MudDataGrid>
+
+@code {
+    private IEnumerable<Student> _Students = new List<Student>();
+    private string _searchString;
+    private string _marksValue;
+    private bool _sortNameByLength;
+    private List<string> _events = new();
+    private bool _isCellEditMode = false;
+    private bool _readOnly = false;
+    private bool _editRow = false;
+    private bool _saveRow;
+    DataGridEditMode _filterMode = DataGridEditMode.Cell;
+    private MudDataGrid<Student> _studentDataGrid;
+    private readonly DialogOptions _maxWidth = new() { MaxWidth = MaxWidth.ExtraSmall };
+
+    // custom sort by name length
+    private Func<Student, object> _sortBy => x =>
+    {
+        if (_sortNameByLength)
+            return x.Name.Length;
+        else
+            return x.Name;
+    };
+
+    // quick filter - filter globally across multiple columns with the same input
+    private Func<Student, bool> _quickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        if (x.Email.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (x.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if ($"{x.DateOfBirth}".Contains(_searchString))
+            return true;
+
+        return false;
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSutents();
+    }
+
+    private async Task LoadSutents()
+    {
+        await StudentService.GetStudents();
+        StateHasChanged();
+    }
+
+    async void OnValueChange()
+    {
+
+    }
+    async Task CreateNewStudent()
+    {
+        await DialogService.ShowAsync<StudentFormDialog>();
+    }
+
+    async Task DeleteStudentDataRow(Student student)
+    {
+        await StudentService.DeleteStudent(student.Id);
+        Snackbar.Add("Student deleted successfuly!", Severity.Success);
+        await LoadSutents();
+    }
+
+    // events
+    async void StartedEditingItem(Student student)
+    {
+        await _studentDataGrid.SetEditingItemAsync(student);
+        //_events.Insert(0, $"Event = StartedEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(student)}");
+    }
+
+    void CanceledEditingItem(Student student)
+    {
+        _events.Insert(0, $"Event = CanceledEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(student)}");
+    }
+
+    async void CommittedItemChanges(Student student)
+    {
+        await StudentService.UpdateStudent(student);
+        _readOnly = true;
+        _editRow = false;
+        Snackbar.Add("Student updated successfuly!", Severity.Success);
+         _events.Insert(0, $"Event = CommittedItemChanges, Data = {System.Text.Json.JsonSerializer.Serialize(student)}");
+    }
+}

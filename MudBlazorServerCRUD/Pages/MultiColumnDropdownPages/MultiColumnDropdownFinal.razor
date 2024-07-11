@@ -1,0 +1,93 @@
+﻿@page "/MultiColumnDropdownFinal"
+@inject IStudentService StudentService
+@using MudBlazor
+
+<MudText Typo="Typo.h4">Multi-Column Dropdown with Filtering</MudText>
+<MudSelect Disabled="@IsDropdownOpen" Variant="Variant.Outlined" T="string" Label="Select Student" @bind-Value="SelectedStudent" Clearable="true" OnClose="CloseDropdown" OnOpen="OpenDropdown" AnchorOrigin="Origin.BottomCenter">
+    <ChildContent>
+        @if (IsDropdownOpen)
+        {
+        <MudDataGrid T="Student" FilterMode="DataGridFilterMode.ColumnFilterRow" Bordered="true"
+                         RowClick="RowClick" QuickFilter="_quickFilter"
+                     MultiSelection="false" Items="@StudentService.Students" SortMode="SortMode.Multiple"
+                     Filterable="true" Striped="false" Hover="true" EditTrigger="DataGridEditTrigger.Manual"
+                     Hideable="false">
+            <ToolBarContent>
+                @* <MudButton Variant="Variant.Filled" Class="my-3 ml-auto" Color="Color.Success" OnClick="CreateNewStudent" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add">Add Student</MudButton>
+                <MudSpacer /> *@
+            <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
+                AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+            </ToolBarContent>
+            <Columns>
+                @* <SelectColumn ShowInHeader="false" T="Student" /> *@
+                <PropertyColumn Property="x => x.Name" Filterable="true" />
+                    <PropertyColumn Property="x => x.Email" Title="Email" Filterable="true" />
+                    <PropertyColumn Property="x => x.Marks" Title="Marks" Filterable="true" />
+                    <PropertyColumn Property="x => x.DateOfBirth" Title="Date Of Birth" Filterable="true" />
+            </Columns>
+            <NoRecordsContent>
+                No Records added.
+            </NoRecordsContent>
+        </MudDataGrid>
+        }
+    </ChildContent>
+</MudSelect>
+
+
+@code {
+    private string SelectedStudent { get; set; }
+    private bool IsDropdownOpen { get; set; } = false;
+    private string SelectedValue { get; set; }
+    private string FilterText { get; set; }
+    private string _searchString;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await StudentService.GetStudents();
+    }
+
+    private void ToggleDropdown()
+    {
+        IsDropdownOpen = !IsDropdownOpen;
+    }
+
+    private void OpenDropdown()
+    {
+        IsDropdownOpen = true;
+    }
+
+    private void CloseDropdown( )
+    {
+        IsDropdownOpen = false;
+    }
+    // private class MyItem
+    // {
+    //     public string Column1 { get; set; }
+    //     public string Column2 { get; set; }
+    //     public string Column3 { get; set; }
+    // }
+
+    private void RowClick(DataGridRowClickEventArgs<Student> args)
+    {
+        SelectedStudent = args.Item.Name;
+        IsDropdownOpen = false;
+    }
+
+    // quick filter - filter globally across multiple columns with the same input
+    private Func<Student, bool> _quickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        if (x.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (x.Email.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if ($"{x.Marks} {x.DateOfBirth}".Contains(_searchString))
+            return true;
+
+        return false;
+    };
+}
