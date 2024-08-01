@@ -1,0 +1,254 @@
+﻿@using System.Net.Http.Json
+@using MudBlazorServerCRUD.Model
+@using System.Collections.ObjectModel
+@using System.ComponentModel.DataAnnotations
+
+@inject IStudentService StudentService
+@inject IGenderService GenderService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+
+<MudDialog Options="@StudentDialogOptions">
+    <DialogContent>
+        <MudForm Model="@Student" @ref="StudentForm">
+            <MudTextField @bind-Value="Student.Name" Margin="Margin.Dense" Class="my-3"
+                          Variant="Variant.Outlined" Label="Name" Required="true" RequiredError="User name is required!" />
+            <MudTextField @bind-Value="Student.Email" Margin="Margin.Dense" Class="my-3"
+                          Variant="Variant.Outlined" Label="Email" Required="true" RequiredError="Email is required!"
+                          Validation="@(new EmailAddressAttribute() { ErrorMessage = "The email address is invalid"} )" />
+            <div >
+
+            <MudSelect Disabled="@_dropdownOpen" Margin="Margin.Dense" T="string"  Label="Select Gender"
+                       @bind-Value="_genderSelectedName" Clearable="true" Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter"
+                       OnClose="CloseDropdown" OnClearButtonClick="OnMudSelectClearButtonClick" OnOpen="OpenDropdown" />
+            <MudPopover Open="@_dropdownOpen" OverflowBehavior="OverflowBehavior.FlipAlways"
+                        TransformOrigin="Origin.TopRight" AnchorOrigin="Origin.BottomCenter"
+                            Style="width:500px;">
+                <MudDataGrid T="Gender" FilterMode="DataGridFilterMode.ColumnFilterRow" Bordered="true" Dense="true"
+                             RowClick="GenderDataGridRowClick" QuickFilter="@_quickFilterGender" FilterCaseSensitivity="@_caseSensitivity"
+                                 MultiSelection="false" Items="@GenderService.Genders" SortMode="SortMode.Multiple"
+                             Filterable="true" Striped="false" Hover="true" EditTrigger="DataGridEditTrigger.Manual"
+                             Hideable="false">
+                    <ToolBarContent>
+                        <MudTextField @bind-Value="_searchString" Placeholder="Search"
+                                      Adornment="Adornment.Start" Immediate="true"
+                                      AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                    </ToolBarContent>
+                    <Columns>
+                        <PropertyColumn Property="x => x.Name" Filterable="true" />
+                        <PropertyColumn Property="x => x.NameA" Filterable="true" />
+                        <PropertyColumn Property="x => x.NameB" Filterable="true" />
+                    </Columns>
+                    <NoRecordsContent>
+                        No Records added.
+                    </NoRecordsContent>
+                    <PagerContent>
+                        <MudDataGridPager  T="Gender" />
+                    </PagerContent>
+                </MudDataGrid>
+            </MudPopover>
+            </div>
+            <MudDatePicker Variant="Variant.Outlined" Label="Birth Date" Class="my-3" Editable="true" PickerVariant="PickerVariant.Inline"
+                           @bind-Date="Student.DateOfBirth" Margin="Margin.Dense" AnchorOrigin="Origin.CenterRight" TransformOrigin="Origin.CenterCenter" />
+            <MudDataGrid @ref="_gradesDataGrid" T="Grade" Elevation="5" FilterMode="DataGridFilterMode.ColumnFilterRow" Bordered="true"
+                         Class="my-3" Dense="true" QuickFilter="@_quickFilterGrades" FilterCaseSensitivity="@_caseSensitivity"
+                         MultiSelection="false" Items="@Student.Grades" SortMode="SortMode.Multiple"
+                         Filterable="true" Striped="false" EditMode="@_filterMode" Hover="true" EditTrigger="DataGridEditTrigger.Manual">
+                <ToolBarContent>
+                    <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="(() => AddGradeAsync(new Grade()))" Size="Size.Small" Class="text-capitalize" StartIcon="@Icons.Material.Filled.Add">Add Grade</MudButton>
+                    <MudSpacer />
+                    <MudTextField @bind-Value="_searchString" Placeholder="Search"
+                                  Adornment="Adornment.End" Immediate="true"
+                                  AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                </ToolBarContent>
+                <Columns>
+                    <PropertyColumn Property="x => x.Subject" Filterable="true" />
+                    <PropertyColumn Property="x => x.Score" Filterable="true" />
+                    <TemplateColumn CellClass="">
+                        <CellTemplate>
+                            <MudStack Row>
+                                <MudIconButton Size="@Size.Small" Color="Color.Info" Icon="@Icons.Material.Outlined.Edit" OnClick="@(() => EditGradeAsync(context.Item))" />
+                                <MudIconButton Size="@Size.Small" Color="Color.Error" Icon="@Icons.Material.Outlined.Delete" OnClick="(() => DeleteGradeAsync(context.Item))" />
+                            </MudStack>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <NoRecordsContent>
+                    No Records added.
+                </NoRecordsContent>
+                <PagerContent>
+                    <MudDataGridPager T="Grade" />
+                </PagerContent>
+            </MudDataGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Filled" FullWidth="true">Cancel</MudButton>
+        <MudButton OnClick="@(()=> SubmitStudent())" Variant="Variant.Filled" Color="Color.Success" FullWidth="true">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* <style>
+    .mud-popover.mud-popover-open {
+        z-index: 1403 !important;
+    }
+</style> *@
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+    [Parameter]
+    public Student Student { get; set; } = new Student();
+
+    private IEnumerable<Student> _Students = new List<Student>();
+    private IEnumerable<Grade> _grades = new List<Grade>();
+    private MudDataGrid<Grade>? _gradesDataGrid;
+    private MudDataGrid<Student>? StudentDataGrid;
+    private Gender _gender = new Gender();
+    private Grade _grade = new Grade();
+    MudForm StudentForm;
+    MudForm _gradeFrom;
+    DataGridFilterCaseSensitivity _caseSensitivity = DataGridFilterCaseSensitivity.CaseInsensitive;
+    DataGridEditMode _filterMode = DataGridEditMode.Form;
+    private readonly DialogOptions StudentDialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
+    private readonly DialogOptions _gradeDialogOptions = new() { BackdropClick = false };
+    private string _searchString;
+    private string _nameSearchFilter = string.Empty;
+    private string _emailSearchFilter = string.Empty;
+    private int _marksSearchFilter;
+    private string _marksValue;
+    private bool _sortNameByLength;
+    private bool _readOnly = false;
+    private bool _dropdownOpen = false;
+    private bool _visible;
+    private bool _nestedVisible;
+    private string _genderSelectedName { get; set; }
+    // Dialog
+    private void Cancel() => MudDialog.Cancel();
+    // Popup
+    private void OpenDropdown() => _dropdownOpen = true;
+    private void CloseDropdown() => _dropdownOpen = false;
+    private void OnMudSelectClearButtonClick() => _dropdownOpen = true;
+
+
+    private void Close() { 
+        _visible = false;
+        Student = new Student();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GenderService.GetGenders();
+        await base.OnInitializedAsync();
+    }
+
+    // quick filter - filter globally across multiple columns with the same input
+    private Func<Grade, bool> _quickFilterGrades => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        if (x.Subject.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if ($"{x.Score}".Contains(_searchString))
+            return true;
+
+        return false;
+    };
+
+    // quick filter - filter globally across multiple columns with the same input
+    private Func<Gender, bool> _quickFilterGender => x =>
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+
+        if (x.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (x.NameA.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (x.NameB.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    };
+
+    private async Task LoadGrades()
+    {
+        _grades = Student.Grades.AsEnumerable();
+    }
+
+    private async Task SubmitStudent()
+    {
+        await StudentForm.Validate();
+
+        if (StudentForm.IsValid)
+        {
+            if (Student.Id == 0)
+            {
+                await StudentService.CreateStudent(Student);
+                //NavigationManager.NavigateTo("/", true);
+                Snackbar.Add("Student created successfuly!", Severity.Success);
+                Student = new Student();
+            }
+            else
+            {
+                await StudentService.UpdateStudent(Student);
+                //NavigationManager.NavigateTo("/", true);
+                Snackbar.Add("Student updated successfuly!", Severity.Warning);
+                Student = new Student();
+            }
+            MudDialog.Close();
+        }
+    }
+
+    async Task DeleteStudentDataRow(Student student)
+    {
+        await StudentService.DeleteStudent(student.Id);
+        Snackbar.Add("Student deleted successfuly!", Severity.Success);
+    }
+
+    private async Task AddGradeAsync(Grade grade)
+    {
+        var parameters = new DialogParameters<GradeDialog> { { x => x.Grade, grade } };
+
+        var dialog = await DialogService.ShowAsync<GradeDialog>("Add Grade", parameters, _gradeDialogOptions);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            Student.Grades.Add((Grade)result.Data);
+        }
+    }
+
+    private async Task DeleteGradeAsync(Grade grade)
+    {
+        Student.Grades.Remove(grade);
+        Snackbar.Add("Grade deleted successfuly!", Severity.Success);
+    }
+
+    private async Task EditGradeAsync(Grade grade)
+    {
+
+        var studentGrade = Student.Grades.FirstOrDefault(s => s.GradeId == grade.GradeId);
+        
+        var parameters = new DialogParameters<GradeDialog> { { x => x.Grade, studentGrade } };
+
+        var dialog = await DialogService.ShowAsync<GradeDialog>("Edit Student", parameters, _gradeDialogOptions);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Grade updated successfuly!", Severity.Success);
+        }
+    }
+
+    private void GenderDataGridRowClick(DataGridRowClickEventArgs<Gender> args)
+    {
+        Student.GenderId = args.Item.Id;
+        _genderSelectedName = args.Item.Name;
+        _dropdownOpen = false;
+    }
+}

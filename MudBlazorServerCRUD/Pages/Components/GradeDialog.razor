@@ -1,0 +1,60 @@
+﻿@using System.Net.Http.Json
+@using MudBlazorServerCRUD.Model
+@using System.Collections.ObjectModel
+@using System.ComponentModel.DataAnnotations
+
+@inject IStudentService StudentService
+@inject IGenderService GenderService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+
+
+<MudDialog Options="@GradeDialogOptions">
+    <DialogContent>
+        <MudForm Model="@Grade" @ref="GradeFrom">
+            <MudTextField @bind-Value="Grade.Subject" Margin="Margin.Dense" Class="my-3"
+                          Variant="Variant.Outlined" Label="Subject" Required="true" RequiredError="Subject is required!" />
+            <MudNumericField @bind-Value="Grade.Score" Margin="Margin.Dense" Class="my-3"
+                             Variant="Variant.Outlined" Label="Score" Required="true" RequiredError="Score is required!" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Filled" FullWidth="true">Cancel</MudButton>
+        <MudButton OnClick="@(()=> SubmitGrade())" Variant="Variant.Filled" Color="Color.Success" FullWidth="true">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .mud-popover.mud-popover-open {
+        z-index: 1403 !important;
+    }
+</style>
+
+@code {
+    [CascadingParameter]
+    private MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public Grade Grade { get; set; } = new Grade();
+
+    MudForm GradeFrom;
+    private readonly DialogOptions GradeDialogOptions = new() { BackdropClick = false };
+
+    private void Cancel() => MudDialog.Cancel();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+    }
+
+    private async Task SubmitGrade()
+    {
+        await GradeFrom.Validate();
+
+        if (GradeFrom.IsValid)
+        {
+            MudDialog.Close(DialogResult.Ok(Grade));
+        }
+    }
+}
