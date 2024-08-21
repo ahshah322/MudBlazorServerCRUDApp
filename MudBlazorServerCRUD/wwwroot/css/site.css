@@ -66,3 +66,7 @@ a, .btn-link {
     .blazor-error-boundary::after {
         content: "An error has occurred."
     }
+
+.mud-data-grid .mud-table-cell.filter-header-cell .gap-3 {
+    gap: 0px !important;
+}

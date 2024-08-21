@@ -5,13 +5,14 @@
 @using System.ComponentModel.DataAnnotations
 
 @inject IStudentService StudentService
+@inject IGenderService GenderService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
 <MudText Typo="Typo.h6">Students</MudText>
 
-<MudDataGrid @ref="_studentDataGrid" T="Student" FilterMode="DataGridFilterMode.ColumnFilterRow" Bordered="true"
-             MultiSelection="false" Items="@FilteredStudents" SortMode="SortMode.Multiple"
+<MudDataGrid T="Student" FilterMode="DataGridFilterMode.ColumnFilterRow" Bordered="true"
+             MultiSelection="false" Items="@FilteredStudents" SortMode="SortMode.Multiple" Dense
              Filterable="true" FilterCaseSensitivity="@_caseSensitivity" QuickFilter="@_quickFilterStudent" Striped="true" EditTrigger="DataGridEditTrigger.Manual"
              Hideable="true" EditMode="@_filterMode" ReadOnly="@_readOnly">
     <ToolBarContent>
@@ -20,29 +21,45 @@
         <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" Immediate="true"
                       AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
     </ToolBarContent>
-    <Columns>
+    <Columns> 
         <PropertyColumn Property="x => x.Name" SortBy="@_sortBy">
             <FilterTemplate>
                 <MudStack Row Justify="Justify.Center" AlignItems="AlignItems.Center">
-                     <MudTextField Value="@_nameSearchFilter" T="string" Immediate="true" ValueChanged="@((x)=> OnNameValueChange(x))"></MudTextField>
-                     <MudIconButton Icon="@(string.IsNullOrEmpty(_nameSearchFilter) ? Icons.Material.Filled.FilterAlt : Icons.Material.Filled.FilterAltOff)" Size="@Size.Small" />
+                     <MudTextField Value="@_nameSearchFilter" T="string" Immediate="true" ValueChanged="@((x) => _nameSearchFilter = x)"></MudTextField>
+                     <MudIconButton OnClick="@(() => _nameSearchFilter = string.Empty)"
+                         Icon="@(string.IsNullOrEmpty(_nameSearchFilter) ? Icons.Material.Filled.FilterAlt : Icons.Material.Filled.FilterAltOff)" Size="@Size.Small" />
                  </MudStack>
              </FilterTemplate>
          </PropertyColumn>
          <PropertyColumn Property="x => x.Email" Title="Email">
              <FilterTemplate>
                  <MudStack Row Justify="Justify.Center" AlignItems="AlignItems.Center">
-                     <MudTextField Value="@_emailSearchFilter" T="string" Immediate="true" ValueChanged="@((x)=> OnEmailValueChange(x))"></MudTextField>
-                     <MudIconButton Icon="@(string.IsNullOrEmpty(_emailSearchFilter) ? Icons.Material.Filled.FilterAlt : Icons.Material.Filled.FilterAltOff)" Size="@Size.Small" />
+                     <MudTextField Value="@_emailSearchFilter" T="string" Immediate="true" ValueChanged="@((x)=> _emailSearchFilter = x)"></MudTextField>
+                     <MudIconButton OnClick="@(() => _emailSearchFilter = string.Empty)"
+                                    Icon="@(string.IsNullOrEmpty(_emailSearchFilter) ? Icons.Material.Filled.FilterAlt : Icons.Material.Filled.FilterAltOff)" Size="@Size.Small" />
                  </MudStack>
              </FilterTemplate>
          </PropertyColumn>
-        <PropertyColumn Property="x => x.GenderId" Title="Genders" />
-        <PropertyColumn Property="x => x.Marks" Title="Marks">
+         <PropertyColumn Property="x => x.Gender.Name" HeaderStyle="min-width: 170px;" Title="Genders">
              <FilterTemplate>
-                 <MudStack Row Justify="Justify.Center" AlignItems="AlignItems.Center">
-                     <MudNumericField Value="@_marksSearchFilter" T="int" Immediate="true" ValueChanged="@((x)=> OnMarksValueChange(x))"></MudNumericField>
-                     <MudIconButton Icon="@(_marksSearchFilter > 0 ? Icons.Material.Filled.FilterAlt : Icons.Material.Filled.FilterAltOff)" Size="@Size.Small" />
+                 <MudStack Row>
+                    <MudSelect Value="@_genderSearchFilter" Dense AnchorOrigin="Origin.BottomCenter" ValueChanged="@((x) => _genderSearchFilter = x)" Margin="Margin.Dense" T="Gender" Variant="Variant.Text">
+                        @foreach (var item in GenderService.Genders)
+                        {
+                            <MudSelectItem Value="item">@item.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudIconButton OnClick="@(() => _genderSearchFilter = null)"
+                                   Icon="@(_genderSearchFilter == null ? Icons.Material.Filled.FilterAlt : Icons.Material.Filled.FilterAltOff)" Size="@Size.Small" />
+                </MudStack>
+            </FilterTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Marks" Title="Marks">
+            <FilterTemplate>
+                <MudStack Row Justify="Justify.Center" AlignItems="AlignItems.Center">
+                     <MudNumericField Value="@_marksSearchFilter" T="int" Immediate="true" ValueChanged="@((x)=> _marksSearchFilter = x)"></MudNumericField>
+                     <MudIconButton OnClick="@(() => _marksSearchFilter = 0)"
+                         Icon="@(_marksSearchFilter == 0 ? Icons.Material.Filled.FilterAlt : Icons.Material.Filled.FilterAltOff)" Size="@Size.Small" />
                  </MudStack>
              </FilterTemplate>
          </PropertyColumn>
@@ -76,110 +93,5 @@
     }
 </style>
 
-@code {
-    private MudDataGrid<Student>? _studentDataGrid;
-    private Grade _grade = new Grade();
-    private Student _student = new Student() { Gender = new Gender() };
-    DataGridFilterCaseSensitivity _caseSensitivity = DataGridFilterCaseSensitivity.CaseInsensitive;
-    DataGridEditMode _filterMode = DataGridEditMode.Form;
-    private readonly DialogOptions _studentDialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, BackdropClick = false };
-    private string _searchString;
-    private string _nameSearchFilter = string.Empty;
-    private string _emailSearchFilter = string.Empty;
-    private int _marksSearchFilter;
-    private string _marksValue;
-    private bool _sortNameByLength;
-    private bool _readOnly = false;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadStudents();
-    }
 
-    private async Task AddStudentAsync(Student student)
-    {
-        var parameters = new DialogParameters<StudentDialog> { { x => x.Student, student } };
-
-        var dialog = await DialogService.ShowAsync<StudentDialog>("Add Student", parameters, _studentDialogOptions);
-        var result = await dialog.Result;
-
-        if (!result.Canceled)
-        {
-            await LoadStudents();
-        }
-    }
-
-    private async Task DeleteStudentAsync(Student student)
-    {
-        await StudentService.DeleteStudent(student.Id);
-        Snackbar.Add("Student deleted successfuly!", Severity.Success);
-        await LoadStudents();
-    }
-
-    private async Task EditStudentAsync(Student student)
-    {
-        var parameters = new DialogParameters<StudentDialog> { { x => x.Student, student } };
-
-        var dialog = await DialogService.ShowAsync<StudentDialog>("Edit Student", parameters, _studentDialogOptions);
-        var result = await dialog.Result;
-
-        if (!result.Canceled)
-        {
-
-            await LoadStudents();
-        }
-    }
-
-    // custom sort by name length
-    private Func<Student, object> _sortBy => x =>
-    {
-        if (_sortNameByLength)
-            return x.Name.Length;
-        else
-            return x.Name;
-    };
-
-    // quick filter - filter globally across multiple columns with the same input
-    private Func<Student, bool> _quickFilterStudent => x =>
-    {
-        if (string.IsNullOrWhiteSpace(_searchString))
-            return true;
-
-        if (x.Email.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if (x.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if ($"{x.DateOfBirth}".Contains(_searchString))
-            return true;
-
-        return false;
-    };
-
-    // Filtered items after the custom row filter applied as input
-    private IEnumerable<Student> FilteredStudents => StudentService.Students
-        .Where(x => string.IsNullOrEmpty(_nameSearchFilter) || x.Name.Contains(_nameSearchFilter, StringComparison.OrdinalIgnoreCase))
-        .Where(x => string.IsNullOrEmpty(_emailSearchFilter) || x.Email.Contains(_emailSearchFilter, StringComparison.OrdinalIgnoreCase))
-        /* .Where(x => x.Marks == MarksFilter) */;
-
-    private async Task LoadStudents()
-    {
-        await StudentService.GetStudents();
-    }
-
-    async void OnNameValueChange(string str)
-    {
-        _nameSearchFilter = str;
-    }
-
-    async void OnEmailValueChange(string str)
-    {
-        _emailSearchFilter = str;
-    }
-
-    async void OnMarksValueChange(int marks)
-    {
-        _marksSearchFilter = marks;
-    }
-}

@@ -17,6 +17,8 @@
             <MudTextField @bind-Value="Student.Email" Margin="Margin.Dense" Class="my-3"
                           Variant="Variant.Outlined" Label="Email" Required="true" RequiredError="Email is required!"
                           Validation="@(new EmailAddressAttribute() { ErrorMessage = "The email address is invalid"} )" />
+            <MudNumericField @bind-Value="Student.Marks" Label="Marks" Margin="Margin.Dense" Class="my-3" T="int" />
+
             <div >
 
             <MudSelect Disabled="@_dropdownOpen" Margin="Margin.Dense" T="string"  Label="Select Gender"
